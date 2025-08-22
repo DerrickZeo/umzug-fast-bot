@@ -1,0 +1,18 @@
+# RUNTIME
+Node.js >= 18 (recommended 20 or 22)
+npm >= 8
+
+# NPM PACKAGES (app uses dotenv to load .env)
+dotenv@^16
+express@^4
+pino@^9
+pino-pretty@^11
+playwright@^1
+
+# PLAYWRIGHT BROWSERS
+chromium  (installed via: npx playwright install --with-deps chromium)
+
+# OPTIONAL (only if you want a process manager)
+pm2@^5
+
+npm i -D pino-pretty
