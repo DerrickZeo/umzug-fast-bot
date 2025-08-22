@@ -1,0 +1,14 @@
+# node
+node_modules/
+npm-debug.log*
+
+# runtime
+auth.json
+logs/
+*.log
+
+# env
+.env
+.env.local  
+
+*.pem
