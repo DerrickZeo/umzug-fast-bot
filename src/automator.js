@@ -1,14 +1,12 @@
-// src/lib/automator-simple.js (watcher version)
-// Fast & stateless watcher that ONLY targets rows containing a form
-// with an accept control (#ctrl_accept or [name="accept"])
+// src/automator.js
+// Fast & stateless watcher that ONLY targets rows whose form has an
+// accept control (#ctrl_accept or [name="accept"]) and NEVER submits cancel.
 
 const fs = require("fs");
 const path = require("path");
 const { chromium } = require("playwright");
 
 const AUTH_STATE_PATH = path.resolve(process.cwd(), "auth.json");
-
-const escRe = (s = "") => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 class UmzugAutomator {
   constructor(cfg, log) {
@@ -173,17 +171,14 @@ class UmzugAutomator {
     await this._dismissOverlays();
     await this._ensureAuthenticated();
 
-    const link = this.page.locator('a[href*="intern/meine-jobs"]');
-    const hasLink = await link
-      .first()
-      .isVisible()
-      .catch(() => false);
+    const link = this.page.locator('a[href*="intern/meine-jobs"]').first();
+    const hasLink = await link.isVisible().catch(() => false);
 
     if (hasLink) {
       await Promise.allSettled([
         this.page.waitForURL(/\/intern\/meine-jobs/, { timeout: 10000 }),
         this.page.waitForLoadState("networkidle", { timeout: 10000 }),
-        link.first().click(),
+        link.click(),
       ]);
     } else {
       await this.page.goto(this.cfg.baseUrl + "/intern/meine-jobs", {
@@ -194,7 +189,7 @@ class UmzugAutomator {
     await this._dismissOverlays();
     await this._ensureAuthenticated();
 
-    // also wait for a possible accept button
+    // Include accept button as a readiness signal
     await this.page
       .waitForSelector(
         "span.date.location, div.entry, form button#ctrl_accept",
@@ -211,7 +206,7 @@ class UmzugAutomator {
   }
 
   async _hasJobsInLiveDOM(trySoft = false) {
-    // CHANGED: treat the presence of an accept control as the strongest signal
+    // Strongest signal: there are entries with an ACCEPT control (and not cancel)
     const acceptCount = await this.page
       .locator(
         'div.entry form button#ctrl_accept, div.entry form [name="accept"]'
@@ -260,7 +255,6 @@ class UmzugAutomator {
 
     const loop = async () => {
       while (this._watcherRunning) {
-        const started = Date.now();
         try {
           const ok = await this._refreshMeineJobs();
           if (!ok) {
@@ -292,6 +286,7 @@ class UmzugAutomator {
               }
               const html = await resp.text();
 
+              // bounced to login?
               if (
                 /name=["']username["']|id=["']username["']/i.test(html) &&
                 /type=["']password["']/i.test(html)
@@ -301,18 +296,18 @@ class UmzugAutomator {
 
               const doc = new DOMParser().parseFromString(html, "text/html");
 
-              // CHANGED: pick only entries that actually have an accept-capable FORM
+              // ONLY entries whose form has an ACCEPT control; NEVER cancel
               let entries = [...doc.querySelectorAll("div.entry")].filter(
                 (e) => {
                   const form = e.querySelector("form");
                   if (!form) return false;
-                  return !!form.querySelector(
-                    '#ctrl_accept,[name="accept"],button[type="submit"],input[type="submit"]'
-                  );
+                  if (form.querySelector("#ctrl_cancel,[name='cancel']"))
+                    return false; // <- guard
+                  return !!form.querySelector("#ctrl_accept,[name='accept']");
                 }
               );
 
-              // Keep preference for "unseen" entries (local to this session)
+              // Prefer unseen entries in this session
               const newbies = [];
               for (const el of entries) {
                 const k = keyOf(el);
@@ -335,12 +330,10 @@ class UmzugAutomator {
                   continue;
                 }
 
-                // CHANGED: ensure we only submit if an accept control exists
-                const acceptBtn =
-                  form.querySelector('#ctrl_accept,[name="accept"]') ||
-                  form.querySelector(
-                    'button[type="submit"],input[type="submit"]'
-                  );
+                // Must be the accept control (no generic submit fallback)
+                const acceptBtn = form.querySelector(
+                  "#ctrl_accept,[name='accept']"
+                );
                 if (!acceptBtn) {
                   errors++;
                   window.__seenKeys.add(key);
@@ -376,7 +369,7 @@ class UmzugAutomator {
                 }
               }
 
-              // mark everything we saw this tick
+              // mark everything we looked at this tick
               for (const el of entries) {
                 const k = keyOf(el);
                 if (k) window.__seenKeys.add(k);
@@ -423,7 +416,7 @@ class UmzugAutomator {
 
   /* ------------------------------- HELPERS --------------------------------- */
 
-  // CHANGED: return only rows that have a submit-capable form
+  // Return only rows that have an ACCEPT control (never cancel)
   async _softRefreshJobsInPage() {
     return await this.page.evaluate(async () => {
       const r = await fetch("/intern/meine-jobs", {
@@ -433,11 +426,12 @@ class UmzugAutomator {
       if (!r.ok) return [];
       const html = await r.text();
       const d = new DOMParser().parseFromString(html, "text/html");
-      const entries = [...d.querySelectorAll("div.entry")].filter((e) =>
-        e.querySelector(
-          "form #ctrl_accept, form [name='accept'], form button[type='submit'], form input[type='submit']"
-        )
-      );
+      const entries = [...d.querySelectorAll("div.entry")].filter((e) => {
+        const form = e.querySelector("form");
+        if (!form) return false;
+        if (form.querySelector("#ctrl_cancel,[name='cancel']")) return false; // <- guard
+        return !!form.querySelector("#ctrl_accept,[name='accept']");
+      });
       return entries.map((el) => ({
         text: el.querySelector(".date.location")?.textContent?.trim() || "",
         status: el.getAttribute("data-status") || "",
