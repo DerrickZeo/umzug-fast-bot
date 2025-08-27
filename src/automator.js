@@ -65,7 +65,7 @@ class UmzugAutomator {
     await this._blockNonEssentialRequests();
 
     await this.page.goto(this.cfg.baseUrl + "/", {
-      waitUntil: "domcontentloaded",
+      waitUntil: "networkidle",
     });
     await this._dismissOverlays();
     await this._ensureAuthenticated();
@@ -99,7 +99,7 @@ class UmzugAutomator {
 
   async _login() {
     await this.page.goto(this.cfg.baseUrl + "/login", {
-      waitUntil: "domcontentloaded",
+      waitUntil: "networkidle",
     });
     await this._dismissOverlays();
 
@@ -143,7 +143,7 @@ class UmzugAutomator {
         .then(() => true)
         .catch(() => false),
       this.page
-        .waitForNavigation({ waitUntil: "domcontentloaded", timeout: 8000 })
+        .waitForNavigation({ waitUntil: "networkidle", timeout: 8000 })
         .then(() => true)
         .catch(() => false),
     ]);
@@ -166,7 +166,7 @@ class UmzugAutomator {
     }
 
     await this.page.goto(this.cfg.baseUrl + "/intern/meine-daten", {
-      waitUntil: "domcontentloaded",
+      waitUntil: "networkidle",
     });
     await this._dismissOverlays();
     await this._ensureAuthenticated();
@@ -448,7 +448,7 @@ class UmzugAutomator {
       const rows = await this._softRefreshJobsInPage();
       return rows && rows.length > 0;
     } catch {
-      await this.page.reload({ waitUntil: "domcontentloaded" }).catch(() => {});
+      await this.page.reload({ waitUntil: "networkidle" }).catch(() => {});
       await this._dismissOverlays();
       await this._ensureAuthenticated();
       return await this._hasJobsInLiveDOM(true);
