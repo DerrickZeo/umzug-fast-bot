@@ -12,3 +12,8 @@ logs/
 .env.local  
 
 *.pem
+
+automator-dual-bot*
+ultrafast-automator*
+new-index*
+pre_upgrade_prep*

@@ -43,13 +43,24 @@ class UmzugAutomator {
     }
 
     this.browser = await chromium.launch({
-      headless: this.cfg.headless,
+      headless: true, // always modern headless
       args: [
+        "--headless=new",
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--no-first-run",
         "--no-zygote",
+        "--disable-gpu",
+        "--use-gl=disabled",
+        "--max_old_space_size=800", // safer JS heap limit
+        "--disable-background-timer-throttling",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding",
+        "--disable-extensions",
+        "--disable-plugins",
+        "--disable-images",
+        "--mute-audio",
       ],
     });
 
@@ -61,7 +72,8 @@ class UmzugAutomator {
     this.page = await this.context.newPage({
       viewport: { width: 1280, height: 800 },
     });
-    this.page.setDefaultTimeout(25000);
+    // new code here
+    this.page.setDefaultTimeout(10000);
     await this._blockNonEssentialRequests();
 
     await this.page.goto(this.cfg.baseUrl + "/", {
@@ -83,7 +95,7 @@ class UmzugAutomator {
   /* -------------------------------- LOGIN ---------------------------------- */
 
   async _ensureAuthenticated() {
-    const atLogin =
+    /* const atLogin =
       this.page.url().includes("/login") ||
       (await this.page
         .locator('input[name="username"], #username')
@@ -94,6 +106,19 @@ class UmzugAutomator {
     if (atLogin) {
       this.log.warn("Session expired — logging in…");
       await this._login();
+    }*/
+
+    // Cheap probe without UI nav
+    const resp = await this.context.request.get(
+      new URL("/intern/meine-daten", this.cfg.baseUrl).href,
+      { maxRedirects: 0, failOnStatusCode: false }
+    );
+    const needsLogin = /\/login\b/.test(resp.url()) || resp.status() === 302;
+    if (needsLogin) {
+      this.log.warn("Session expired — logging in…");
+      await this._login();
+    } else {
+      this.isLoggedIn = true;
     }
   }
 

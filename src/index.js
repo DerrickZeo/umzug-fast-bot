@@ -14,7 +14,7 @@ const cfg = {
   username: process.env.LOGIN_USERNAME,
   password: process.env.LOGIN_PASSWORD,
   baseUrl: process.env.BASE_URL || "https://studenten-umzugshilfe.com",
-  headless: String(process.env.HEADLESS || "true").toLowerCase() === "true",
+  // headless: String(process.env.HEADLESS || "true").toLowerCase() === "true",
   pollMs: Number(process.env.POLL_MS || 1000),
   maxPerTick: Number(process.env.MAX_PER_TICK || 3),
   keepAliveMin: Number(process.env.KEEP_ALIVE_MIN || 4),
@@ -36,7 +36,7 @@ const cfg = {
   });
 
   try {
-    log.info("Starting Umzug Meine-Jobs bot…");
+    log.info("Starting Umzug Fast bot…");
     await bot.initialize();
     await bot.startWatcher();
 
