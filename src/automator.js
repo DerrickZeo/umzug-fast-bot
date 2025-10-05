@@ -43,13 +43,24 @@ class UmzugAutomator {
     }
 
     this.browser = await chromium.launch({
-      headless: this.cfg.headless,
+      headless: true,
       args: [
+        "--headless=new",
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--no-first-run",
         "--no-zygote",
+        "--disable-gpu",
+        "--use-gl=disabled",
+        "--max_old_space_size=800", // safer JS heap limit
+        "--disable-background-timer-throttling",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding",
+        "--disable-extensions",
+        "--disable-plugins",
+        "--disable-images",
+        "--mute-audio",
       ],
     });
 
@@ -61,7 +72,7 @@ class UmzugAutomator {
     this.page = await this.context.newPage({
       viewport: { width: 1280, height: 800 },
     });
-    this.page.setDefaultTimeout(25000);
+    this.page.setDefaultTimeout(10000);
     await this._blockNonEssentialRequests();
 
     await this.page.goto(this.cfg.baseUrl + "/", {
