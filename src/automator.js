@@ -50,9 +50,17 @@ class UmzugAutomator {
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--no-first-run",
+        "--no-zygote",
         "--disable-gpu",
         "--use-gl=disabled",
-        "--no-zygote",
+        "--max_old_space_size=800", // safer JS heap limit
+        "--disable-background-timer-throttling",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding",
+        "--disable-extensions",
+        "--disable-plugins",
+        "--disable-images",
+        "--mute-audio",
       ],
     });
 
